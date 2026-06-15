@@ -1,0 +1,6 @@
+Product Catalog API
+
+The product catalog exposes a REST API for listing and searching products.
+Endpoint: GET /api/products returns a paginated list of products.
+Each product has: id, name, price, stock_quantity, category.
+Use the query parameter ?category=electronics to filter by category.

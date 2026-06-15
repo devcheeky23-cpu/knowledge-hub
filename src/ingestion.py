@@ -1,0 +1,128 @@
+import os
+import re
+import chromadb
+from sentence_transformers import SentenceTransformer
+
+_MODEL_NAME = "intfloat/multilingual-e5-small"
+_embedder = None
+_client = None
+_collection = None
+
+
+def _get_embedder():
+    global _embedder
+    if _embedder is None:
+        _embedder = SentenceTransformer(_MODEL_NAME)
+    return _embedder
+
+
+def _get_collection():
+    global _client, _collection
+    if _collection is None:
+        db_path = os.environ.get("CHROMA_DB_PATH", ".chroma")
+        _client = chromadb.PersistentClient(path=db_path)
+        _collection = _client.get_or_create_collection("documents")
+    return _collection
+
+
+def _reset():
+    global _client, _collection
+    _client = None
+    _collection = None
+    # Note: _embedder is intentionally NOT reset — model loading takes ~30s
+    # and the embedder is stateless across collections.
+
+
+def _chunk_text(text, chunk_size=750, overlap=100):
+    words = text.split()
+    chunks = []
+    start = 0
+    while start < len(words):
+        end = start + chunk_size
+        chunks.append(" ".join(words[start:end]))
+        start += chunk_size - overlap
+    return chunks
+
+
+def _parse_markdown(content, source_file):
+    records = []
+    current_heading = ""
+    current_lines = []
+
+    for line in content.splitlines():
+        if line.startswith("#"):
+            if current_lines:
+                records.append({
+                    "text": "\n".join(current_lines).strip(),
+                    "source_file": source_file,
+                    "section_heading": current_heading,
+                })
+                current_lines = []
+            current_heading = line.lstrip("#").strip()
+        else:
+            if line.strip():
+                current_lines.append(line)
+
+    if current_lines:
+        records.append({
+            "text": "\n".join(current_lines).strip(),
+            "source_file": source_file,
+            "section_heading": current_heading,
+        })
+    return records
+
+
+def _parse_plaintext(content, source_file):
+    return [{"text": content.strip(), "source_file": source_file, "section_heading": ""}]
+
+
+def ingest(file_path: str, chunk_size: int = 750, overlap: int = 100) -> int:
+    source_file = os.path.basename(file_path)
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    if file_path.endswith(".md"):
+        records = _parse_markdown(content, source_file)
+    else:
+        records = _parse_plaintext(content, source_file)
+
+    embedder = _get_embedder()
+    collection = _get_collection()
+
+    chunk_count = 0
+    for record in records:
+        chunks = _chunk_text(record["text"], chunk_size, overlap)
+        for i, chunk in enumerate(chunks):
+            if not chunk.strip():
+                continue
+            embedding = embedder.encode(chunk).tolist()
+            chunk_id = f"{source_file}_{record['section_heading']}_{i}"
+            collection.add(
+                ids=[chunk_id],
+                embeddings=[embedding],
+                documents=[chunk],
+                metadatas=[{
+                    "source_file": record["source_file"],
+                    "section_heading": record["section_heading"],
+                }],
+            )
+            chunk_count += 1
+
+    return chunk_count
+
+
+def query(query_text: str, top_k: int = 5) -> list[dict]:
+    embedder = _get_embedder()
+    collection = _get_collection()
+
+    embedding = embedder.encode(query_text).tolist()
+    results = collection.query(query_embeddings=[embedding], n_results=top_k)
+
+    output = []
+    for doc, meta in zip(results["documents"][0], results["metadatas"][0]):
+        output.append({
+            "text": doc,
+            "source_file": meta["source_file"],
+            "section_heading": meta["section_heading"],
+        })
+    return output
