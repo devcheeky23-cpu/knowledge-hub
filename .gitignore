@@ -1,5 +1,8 @@
 .venv/
 .env
+presentation_doc/
+make_proposal.py
+*.pptx
 __pycache__/
 *.pyc
 .chroma/
