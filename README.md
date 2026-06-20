@@ -29,9 +29,28 @@ committed.
 - **Local:** put `GITHUB_MODELS_TOKEN=...` in a `.env` file (gitignored).
 - **HF Spaces:** set `GITHUB_MODELS_TOKEN` as a Space Secret.
 
+### Switching provider / model
+
+The LLM client (`src/llm_client.py`) is provider-agnostic — swap provider or
+model via environment variables, no code changes:
+
+- `LLM_PROVIDER` — `github_models` (default), `groq`, or `gemini`.
+- `LLM_MODEL` — override the provider's default model (e.g. `openai/gpt-4o` for
+  the demo).
+
+Each provider reads its own token env var: `GITHUB_MODELS_TOKEN`, `GROQ_API_KEY`,
+or `GEMINI_API_KEY`.
+
 ## Run locally
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+## Run tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
 ```
