@@ -34,14 +34,20 @@ def _build_prompt(question: str, chunks: list[dict]) -> str:
     return (
         "You answer questions using ONLY the numbered document chunks below. "
         "Do not use any outside or general knowledge.\n"
-        "If the chunks do not contain enough information to answer, you must abstain.\n\n"
+        "If the chunks do not contain enough information to answer, you must abstain.\n"
+        "If two or more chunks give contradictory answers to the question, you must "
+        "report a conflict instead of choosing between them.\n\n"
         f"Chunks:\n{numbered}\n\n"
         f"Question: {question}\n\n"
         "Respond with a single JSON object and nothing else:\n"
-        '{"mode": "found" | "abstain", "answer_text": "...", "used_chunks": [chunk numbers you used]}\n'
+        '{"mode": "found" | "abstain" | "conflict", "answer_text": "...", '
+        '"used_chunks": [chunk numbers you used]}\n'
         '- "found": answer from the chunks; list every chunk number you used in "used_chunks".\n'
         '- "abstain": the chunks lack the answer; set "used_chunks" to [] and say the '
-        "information is not in the documents."
+        "information is not in the documents.\n"
+        '- "conflict": the chunks contradict each other; in "answer_text" state each '
+        "conflicting claim and do NOT choose a side, and list every conflicting chunk "
+        'number in "used_chunks".'
     )
 
 
