@@ -36,6 +36,10 @@ Issues #5, #9, #12 are unblocked but not on the critical path — interleave whe
 ## Status of each issue (update as work progresses)
 
 - #2 ✅ Done — infra validated, HF Space live
-- #3 → next
+- #3 ✅ Done — provider-agnostic LLM client
 - #4 ✅ Done — ingestion pipeline (MD + TXT)
-- All others: open
+- #6 ✅ Done — answer engine: found + abstain
+- #7 ✅ Done — answer engine: conflict mode
+- #8 ✅ Done — Streamlit chat UI
+- #9 ✅ Done — Streamlit doc management UI
+- #5, #10, #11, #12: open

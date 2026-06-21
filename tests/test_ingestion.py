@@ -50,3 +50,27 @@ def test_query_returns_relevant_chunk():
     assert len(results) > 0
     top_text = results[0]["text"].lower()
     assert any(word in top_text for word in ["cancel", "refund", "order"])
+
+
+def test_delete_document_removes_only_that_files_chunks():
+    from src.ingestion import ingest, query, delete_document
+
+    ingest(str(FIXTURES / "sample.md"))
+    ingest(str(FIXTURES / "sample.txt"))
+
+    delete_document("sample.md")
+
+    results = query("cancel an order", top_k=10)
+    source_files = {r["source_file"] for r in results}
+    assert "sample.md" not in source_files
+    # the other document's chunks survive
+    assert "sample.txt" in source_files
+
+
+def test_clear_empties_the_store():
+    from src.ingestion import ingest, query, clear
+
+    ingest(str(FIXTURES / "sample.md"))
+    clear()
+
+    assert query("anything at all", top_k=5) == []
