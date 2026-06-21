@@ -1,42 +1,60 @@
-"""Minimal Streamlit smoke test for the deployment pipeline (#2).
+"""Knowledge Hub — chat page (#8).
 
-Validates the full infra path: GitHub repo → Actions → HF Space → Secrets →
-GitHub Models. Sends one test prompt and shows the response.
-
-PAT is read from the GITHUB_MODELS_TOKEN environment variable only.
-Locally: put it in a .env (gitignored). On HF Spaces: set it as a Space Secret.
+The user asks a question; the answer engine retrieves grounded chunks and
+returns an Answer. Answers render with expandable citations. Three modes are
+handled: found, abstain, conflict.
 """
-import os
-
 import streamlit as st
-from openai import OpenAI
 
-ENDPOINT = "https://models.github.ai/inference"
-DEFAULT_MODEL = "openai/gpt-4o-mini"
+from src import answer_engine
 
 
-def get_client():
-    token = os.environ.get("GITHUB_MODELS_TOKEN")
-    if not token:
-        return None
-    return OpenAI(base_url=ENDPOINT, api_key=token)
+@st.cache_resource
+def _embedder():
+    """Load the embedding model once per session, not per query."""
+    from src.ingestion import _get_embedder
+
+    return _get_embedder()
 
 
-st.title("Deployment smoke test")
-st.caption("Validates GitHub Models connectivity via the deployment pipeline.")
+def _render_answer(answer):
+    if answer.mode == "abstain":
+        st.warning("Information not found in the documents.")
+        return
 
-client = get_client()
-if client is None:
-    st.error("GITHUB_MODELS_TOKEN is not set. Add it as a Space Secret (or .env locally).")
-    st.stop()
+    if answer.mode == "conflict":
+        st.markdown("⚠️ The documents contain conflicting information:")
 
-prompt = st.text_input("Test prompt", value="Reply with the single word: pong")
+    st.markdown(answer.answer_text)
 
-if st.button("Send"):
-    with st.spinner("Calling GitHub Models..."):
-        response = client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-        )
-    st.success("Response received")
-    st.write(response.choices[0].message.content)
+    for citation in answer.citations:
+        section = citation.section_heading or "(no section)"
+        with st.expander(f"📄 {citation.source_file} — {section}"):
+            st.markdown(citation.chunk_text)
+
+
+st.title("📚 Knowledge Hub")
+st.caption("Ask a question about your project documents.")
+
+_embedder()
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        if message["role"] == "user":
+            st.markdown(message["content"])
+        else:
+            _render_answer(message["answer"])
+
+question = st.chat_input("Ask a question")
+if question:
+    st.session_state.messages.append({"role": "user", "content": question})
+    with st.chat_message("user"):
+        st.markdown(question)
+
+    answer = answer_engine.answer(question)
+    st.session_state.messages.append({"role": "assistant", "answer": answer})
+    with st.chat_message("assistant"):
+        _render_answer(answer)
