@@ -125,3 +125,58 @@ def test_retrieves_between_4_and_6_chunks(monkeypatch):
     engine.answer("how do I cancel an order")
 
     assert 4 <= captured["top_k"] <= 6
+
+
+CONFLICT_CHUNKS = [
+    {
+        "text": "Refunds are issued within 14 days of purchase.",
+        "source_file": "policy_v1.md",
+        "section_heading": "Refunds",
+    },
+    {
+        "text": "Refunds are issued within 30 days of purchase.",
+        "source_file": "policy_v2.md",
+        "section_heading": "Refunds",
+    },
+]
+
+
+@respx.mock
+def test_prompt_instructs_conflict_detection_without_choosing_a_side(monkeypatch):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "test-token")
+    import src.answer_engine as engine
+
+    monkeypatch.setattr(engine, "_retrieve", lambda question, top_k: CONFLICT_CHUNKS)
+    route = _mock_llm({"mode": "found", "answer_text": "ok", "used_chunks": [1]})
+
+    engine.answer("what is the refund window")
+
+    prompt = json.loads(route.calls.last.request.content)["messages"][0]["content"]
+    lower = prompt.lower()
+    assert "conflict" in lower
+    # the model must be told not to pick a winner
+    assert "do not" in lower or "decline" in lower or "without" in lower
+
+
+@respx.mock
+def test_conflict_mode_reports_both_sides_with_citations(monkeypatch):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "test-token")
+    import src.answer_engine as engine
+
+    monkeypatch.setattr(engine, "_retrieve", lambda question, top_k: CONFLICT_CHUNKS)
+    _mock_llm(
+        {
+            "mode": "conflict",
+            "answer_text": "policy_v1 says 14 days; policy_v2 says 30 days.",
+            "used_chunks": [1, 2],
+        }
+    )
+
+    answer = engine.answer("what is the refund window")
+
+    assert answer.mode == "conflict"
+    assert len(answer.citations) == 2
+    sources = {c.source_file for c in answer.citations}
+    assert sources == {"policy_v1.md", "policy_v2.md"}
+    texts = {c.chunk_text for c in answer.citations}
+    assert texts == {CONFLICT_CHUNKS[0]["text"], CONFLICT_CHUNKS[1]["text"]}
