@@ -1,0 +1,82 @@
+import importlib
+import os
+import sys
+import types
+
+import pytest
+
+
+@pytest.fixture
+def fake_ingestion(monkeypatch, tmp_path):
+    """Inject a fake src.ingestion (chromadb is not installed locally) and point
+    the source-document store at an isolated tmp dir. Returns the fake so tests
+    can inspect how document_manager drove the ingestion pipeline."""
+    fake = types.ModuleType("src.ingestion")
+    fake.ingest_calls = []
+    fake.deleted = []
+    fake.cleared = 0
+
+    def ingest(path, chunk_size=750, overlap=100):
+        fake.ingest_calls.append(path)
+        return 3  # pretend each document produced 3 chunks
+
+    def delete_document(source_file):
+        fake.deleted.append(source_file)
+
+    def clear():
+        fake.cleared += 1
+
+    fake.ingest = ingest
+    fake.delete_document = delete_document
+    fake.clear = clear
+
+    monkeypatch.setitem(sys.modules, "src.ingestion", fake)
+    monkeypatch.setenv("SOURCE_DOCS_PATH", str(tmp_path / "source_docs"))
+    sys.modules.pop("src.document_manager", None)
+    yield fake
+
+
+@pytest.fixture
+def dm(fake_ingestion):
+    import src.document_manager as module
+
+    return importlib.reload(module)
+
+
+def test_save_and_ingest_persists_file_and_returns_chunk_count(dm, fake_ingestion):
+    count = dm.save_and_ingest("orders.md", b"# Orders\nHow to cancel an order.")
+
+    # the uploaded document is persisted so re-ingest can rebuild from it later
+    saved = dm.list_documents()
+    assert "orders.md" in saved
+    # it was run through the ingestion pipeline and the chunk count is surfaced
+    assert count == 3
+    assert any(path.endswith("orders.md") for path in fake_ingestion.ingest_calls)
+
+
+def test_delete_document_removes_file_and_its_chunks(dm, fake_ingestion):
+    dm.save_and_ingest("orders.md", b"# Orders\ncontent")
+    dm.save_and_ingest("refunds.md", b"# Refunds\ncontent")
+
+    dm.delete_document("orders.md")
+
+    # gone from the source store entirely, not merely hidden
+    assert dm.list_documents() == ["refunds.md"]
+    # and its Chunks were removed from the vector store
+    assert fake_ingestion.deleted == ["orders.md"]
+
+
+def test_reingest_clears_store_then_reingests_every_document(dm, fake_ingestion):
+    dm.save_and_ingest("orders.md", b"# Orders\ncontent")
+    dm.save_and_ingest("refunds.md", b"# Refunds\ncontent")
+    fake_ingestion.ingest_calls.clear()  # ignore the per-upload ingests
+
+    total = dm.reingest()
+
+    # the store is wiped exactly once before rebuilding
+    assert fake_ingestion.cleared == 1
+    # every stored document is run through ingestion again
+    reingested = [os.path.basename(p) for p in fake_ingestion.ingest_calls]
+    assert sorted(reingested) == ["orders.md", "refunds.md"]
+    # total chunk count across the rebuild is surfaced (3 per document)
+    assert total == 6

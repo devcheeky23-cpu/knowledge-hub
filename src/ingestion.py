@@ -111,6 +111,21 @@ def ingest(file_path: str, chunk_size: int = 750, overlap: int = 100) -> int:
     return chunk_count
 
 
+def delete_document(source_file: str) -> None:
+    """Remove every Chunk belonging to a single source Document."""
+    collection = _get_collection()
+    collection.delete(where={"source_file": source_file})
+
+
+def clear() -> None:
+    """Drop all Chunks — the destructive first half of a Re-ingest."""
+    global _collection
+    _get_collection()  # ensure _client is initialised
+    _client.delete_collection("documents")
+    _collection = None
+    _get_collection()  # recreate an empty collection
+
+
 def query(query_text: str, top_k: int = 5) -> list[dict]:
     embedder = _get_embedder()
     collection = _get_collection()
