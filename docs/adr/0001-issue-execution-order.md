@@ -42,4 +42,7 @@ Issues #5, #9, #12 are unblocked but not on the critical path — interleave whe
 - #7 ✅ Done — answer engine: conflict mode
 - #8 ✅ Done — Streamlit chat UI
 - #9 ✅ Done — Streamlit doc management UI
-- #5, #10, #11, #12: open
+- #5 ✅ Done — PDF support (PyMuPDF)
+- #12 ✅ Done — full-document citation view
+- #10 ✅ Done — full deploy + pre-built seed index
+- #11: open — golden question set eval (blocked until #10 deployment is verified live)

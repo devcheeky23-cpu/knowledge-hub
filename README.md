@@ -16,9 +16,19 @@ answer, the system abstains rather than guessing.
 
 ## Status
 
-Deployment pipeline smoke test (#2). The current `app.py` is a minimal app that
-validates the full infra path: GitHub → Actions → Hugging Face Spaces →
-Secrets → GitHub Models.
+Full RAG app deployed on Hugging Face Spaces: a chat page (`app.py`) that answers
+questions grounded in ingested documents with citations (and abstains or reports
+conflicts when appropriate), plus a document management page
+(`pages/Manage_Documents.py`) for uploading, listing, deleting, and re-ingesting
+documents. Markdown, plain-text, and PDF documents are supported. A pre-built
+Chroma index (`seed_index/`, built from `seed_docs/`) is committed so the app is
+queryable immediately after a cold start, with no manual re-ingest.
+
+### Rebuilding the seed index
+
+```bash
+python scripts/build_seed_index.py
+```
 
 ## Configuration
 

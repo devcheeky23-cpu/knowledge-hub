@@ -1,4 +1,6 @@
 import os
+import shutil
+from pathlib import Path
 
 _MODEL_NAME = "intfloat/multilingual-e5-small"
 _embedder = None
@@ -22,6 +24,20 @@ def _get_collection():
         _client = chromadb.PersistentClient(path=db_path)
         _collection = _client.get_or_create_collection("documents")
     return _collection
+
+
+def bootstrap_index() -> bool:
+    """Seed the working vector store from the committed pre-built index on a cold
+    start. HF Spaces disk is ephemeral, so on startup the working store is absent;
+    copy the committed seed index into place so the app is queryable with no
+    manual re-ingest. Returns True if it seeded, False if a store already exists
+    (uploads from a warm session are preserved)."""
+    db_path = Path(os.environ.get("CHROMA_DB_PATH", ".chroma"))
+    seed_path = Path(os.environ.get("SEED_INDEX_PATH", "seed_index"))
+    if db_path.exists() or not seed_path.exists():
+        return False
+    shutil.copytree(seed_path, db_path)
+    return True
 
 
 def _reset():
