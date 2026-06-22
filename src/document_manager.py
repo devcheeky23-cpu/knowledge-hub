@@ -29,6 +29,16 @@ def list_documents() -> list[str]:
     return sorted(p.name for p in _source_dir().iterdir() if p.is_file())
 
 
+def get_document_text(filename: str) -> str:
+    """Return the full text of a stored Document, so a Citation can resolve back
+    to the whole source — not just the retrieved Chunk."""
+    path = _source_dir() / filename
+    if filename.endswith(".pdf"):
+        records = ingestion._parse_pdf(str(path), filename)
+        return "\n\n".join(r["text"] for r in records)
+    return path.read_text(encoding="utf-8")
+
+
 def delete_document(filename: str) -> None:
     """Remove a Document from the system entirely: its Chunks from the vector
     store and its source file from storage."""
