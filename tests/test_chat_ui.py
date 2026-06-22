@@ -10,14 +10,23 @@ APP = str(Path(__file__).resolve().parent.parent / "app.py")
 
 
 @pytest.fixture(autouse=True)
-def stub_ingestion(monkeypatch):
-    """Inject a fake src.ingestion so the chat page can run without chromadb /
-    sentence-transformers installed."""
-    fake = types.ModuleType("src.ingestion")
-    fake._get_embedder = lambda: "embedder"
-    fake.query = lambda question, top_k=5: []
-    fake.bootstrap_index = lambda: False
-    monkeypatch.setitem(sys.modules, "src.ingestion", fake)
+def stub_modules(monkeypatch):
+    """Inject fake src.ingestion + src.document_manager so the chat page can run
+    without chromadb / sentence-transformers installed and without touching the
+    real source-document store."""
+    import src as src_pkg
+
+    fake_ing = types.ModuleType("src.ingestion")
+    fake_ing._get_embedder = lambda: "embedder"
+    fake_ing.query = lambda question, top_k=5: []
+    monkeypatch.setitem(sys.modules, "src.ingestion", fake_ing)
+    monkeypatch.setattr(src_pkg, "ingestion", fake_ing, raising=False)
+
+    fake_dm = types.ModuleType("src.document_manager")
+    fake_dm.bootstrap = lambda: False
+    fake_dm.get_document_text = lambda name: ""
+    monkeypatch.setitem(sys.modules, "src.document_manager", fake_dm)
+    monkeypatch.setattr(src_pkg, "document_manager", fake_dm, raising=False)
     yield
 
 
@@ -51,6 +60,7 @@ def test_found_renders_answer_and_expandable_citation(monkeypatch):
 def test_citation_can_reveal_full_source_document(monkeypatch):
     # the full Document is fetched on demand from the document manager
     fake_dm = types.ModuleType("src.document_manager")
+    fake_dm.bootstrap = lambda: False
     fake_dm.get_document_text = lambda name: f"FULL TEXT of {name}\nevery line of it."
     monkeypatch.setitem(sys.modules, "src.document_manager", fake_dm)
     import src as src_pkg
@@ -125,7 +135,7 @@ def test_conversation_history_persists_within_session(monkeypatch):
     assert "Answer to: second question" in rendered
 
 
-def test_startup_seeds_prebuilt_index(monkeypatch):
+def test_startup_seeds_from_seed_corpus(monkeypatch):
     import streamlit as st
     from streamlit.testing.v1 import AppTest
 
@@ -135,11 +145,12 @@ def test_startup_seeds_prebuilt_index(monkeypatch):
         calls["n"] += 1
         return True
 
-    fake = types.ModuleType("src.ingestion")
-    fake._get_embedder = lambda: "embedder"
-    fake.query = lambda question, top_k=5: []
-    fake.bootstrap_index = counting_bootstrap
-    monkeypatch.setitem(sys.modules, "src.ingestion", fake)
+    import src as src_pkg
+    fake_dm = types.ModuleType("src.document_manager")
+    fake_dm.bootstrap = counting_bootstrap
+    fake_dm.get_document_text = lambda name: ""
+    monkeypatch.setitem(sys.modules, "src.document_manager", fake_dm)
+    monkeypatch.setattr(src_pkg, "document_manager", fake_dm, raising=False)
     monkeypatch.setattr(
         "src.answer_engine.answer",
         lambda q: Answer(mode="found", answer_text="ok", citations=[]),
@@ -149,7 +160,7 @@ def test_startup_seeds_prebuilt_index(monkeypatch):
     at = AppTest.from_file(APP)
     at.run()
 
-    # the committed pre-built index is loaded once on cold start, before any query
+    # the seed corpus is loaded once on cold start, before any query
     assert calls["n"] == 1
 
 
@@ -166,7 +177,6 @@ def test_embedding_model_loaded_once_across_queries(monkeypatch):
     fake = types.ModuleType("src.ingestion")
     fake._get_embedder = counting_loader
     fake.query = lambda question, top_k=5: []
-    fake.bootstrap_index = lambda: False
     monkeypatch.setitem(sys.modules, "src.ingestion", fake)
     monkeypatch.setattr(
         "src.answer_engine.answer",

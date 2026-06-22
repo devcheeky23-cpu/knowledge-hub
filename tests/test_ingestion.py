@@ -5,38 +5,6 @@ from pathlib import Path
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def test_bootstrap_index_seeds_empty_store_from_seed_docs(tmp_path, monkeypatch):
-    from src.ingestion import bootstrap_index, query
-    import src.ingestion as ing
-
-    seed = tmp_path / "seed_docs"
-    seed.mkdir()
-    (seed / "policy.md").write_text("# Refunds\nRefunds are issued within 30 days of delivery.")
-    monkeypatch.setenv("CHROMA_DB_PATH", str(tmp_path / "chroma"))  # absent → cold start
-    monkeypatch.setenv("SEED_DOCS_PATH", str(seed))
-    ing._reset()
-
-    seeded = bootstrap_index()
-
-    assert seeded is True
-    results = query("refund window", top_k=1)
-    assert results and "policy.md" in results[0]["source_file"]
-
-
-def test_bootstrap_index_does_not_reseed_existing_store(tmp_path, monkeypatch):
-    from src.ingestion import bootstrap_index
-
-    seed = tmp_path / "seed_docs"
-    seed.mkdir()
-    (seed / "policy.md").write_text("# Refunds\ncontent")
-    db = tmp_path / "chroma"
-    db.mkdir()  # a store already exists — uploads from a warm session are preserved
-    monkeypatch.setenv("CHROMA_DB_PATH", str(db))
-    monkeypatch.setenv("SEED_DOCS_PATH", str(seed))
-
-    assert bootstrap_index() is False
-
-
 @pytest.fixture(autouse=True)
 def isolated_chroma(tmp_path, monkeypatch):
     """Each test gets its own ChromaDB path — no shared state."""
