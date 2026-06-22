@@ -20,15 +20,10 @@ Full RAG app deployed on Hugging Face Spaces: a chat page (`app.py`) that answer
 questions grounded in ingested documents with citations (and abstains or reports
 conflicts when appropriate), plus a document management page
 (`pages/Manage_Documents.py`) for uploading, listing, deleting, and re-ingesting
-documents. Markdown, plain-text, and PDF documents are supported. A pre-built
-Chroma index (`seed_index/`, built from `seed_docs/`) is committed so the app is
-queryable immediately after a cold start, with no manual re-ingest.
-
-### Rebuilding the seed index
-
-```bash
-python scripts/build_seed_index.py
-```
+documents. Markdown, plain-text, and PDF documents are supported. On a cold start
+the vector store is seeded automatically from the committed `seed_docs/` corpus
+(`ingestion.bootstrap_index()`), so the app is queryable immediately with no
+manual re-ingest.
 
 ## Configuration
 
