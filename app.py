@@ -10,6 +10,15 @@ from src import answer_engine
 
 
 @st.cache_resource
+def _bootstrap():
+    """Seed the vector store from the committed pre-built index once on cold
+    start, so the app is queryable immediately with no manual re-ingest."""
+    from src.ingestion import bootstrap_index
+
+    return bootstrap_index()
+
+
+@st.cache_resource
 def _embedder():
     """Load the embedding model once per session, not per query."""
     from src.ingestion import _get_embedder
@@ -40,6 +49,7 @@ def _render_answer(answer, msg_idx):
 st.title("📚 Knowledge Hub")
 st.caption("Ask a question about your project documents.")
 
+_bootstrap()
 _embedder()
 
 if "messages" not in st.session_state:

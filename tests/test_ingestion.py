@@ -5,6 +5,40 @@ from pathlib import Path
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+def test_bootstrap_index_seeds_working_store_on_cold_start(tmp_path, monkeypatch):
+    from src.ingestion import bootstrap_index
+
+    seed = tmp_path / "seed_index"
+    seed.mkdir()
+    (seed / "chroma.sqlite3").write_bytes(b"prebuilt")
+    db = tmp_path / "chroma"  # absent — simulates an ephemeral cold start
+    monkeypatch.setenv("CHROMA_DB_PATH", str(db))
+    monkeypatch.setenv("SEED_INDEX_PATH", str(seed))
+
+    seeded = bootstrap_index()
+
+    assert seeded is True
+    assert (db / "chroma.sqlite3").read_bytes() == b"prebuilt"
+
+
+def test_bootstrap_index_does_not_overwrite_existing_store(tmp_path, monkeypatch):
+    from src.ingestion import bootstrap_index
+
+    seed = tmp_path / "seed_index"
+    seed.mkdir()
+    (seed / "chroma.sqlite3").write_bytes(b"prebuilt")
+    db = tmp_path / "chroma"
+    db.mkdir()
+    (db / "chroma.sqlite3").write_bytes(b"live-with-uploads")  # already populated
+    monkeypatch.setenv("CHROMA_DB_PATH", str(db))
+    monkeypatch.setenv("SEED_INDEX_PATH", str(seed))
+
+    seeded = bootstrap_index()
+
+    assert seeded is False
+    assert (db / "chroma.sqlite3").read_bytes() == b"live-with-uploads"
+
+
 @pytest.fixture(autouse=True)
 def isolated_chroma(tmp_path, monkeypatch):
     """Each test gets its own ChromaDB path — no shared state."""

@@ -16,6 +16,7 @@ def stub_ingestion(monkeypatch):
     fake = types.ModuleType("src.ingestion")
     fake._get_embedder = lambda: "embedder"
     fake.query = lambda question, top_k=5: []
+    fake.bootstrap_index = lambda: False
     monkeypatch.setitem(sys.modules, "src.ingestion", fake)
     yield
 
@@ -124,6 +125,34 @@ def test_conversation_history_persists_within_session(monkeypatch):
     assert "Answer to: second question" in rendered
 
 
+def test_startup_seeds_prebuilt_index(monkeypatch):
+    import streamlit as st
+    from streamlit.testing.v1 import AppTest
+
+    calls = {"n": 0}
+
+    def counting_bootstrap():
+        calls["n"] += 1
+        return True
+
+    fake = types.ModuleType("src.ingestion")
+    fake._get_embedder = lambda: "embedder"
+    fake.query = lambda question, top_k=5: []
+    fake.bootstrap_index = counting_bootstrap
+    monkeypatch.setitem(sys.modules, "src.ingestion", fake)
+    monkeypatch.setattr(
+        "src.answer_engine.answer",
+        lambda q: Answer(mode="found", answer_text="ok", citations=[]),
+    )
+    st.cache_resource.clear()
+
+    at = AppTest.from_file(APP)
+    at.run()
+
+    # the committed pre-built index is loaded once on cold start, before any query
+    assert calls["n"] == 1
+
+
 def test_embedding_model_loaded_once_across_queries(monkeypatch):
     import streamlit as st
     from streamlit.testing.v1 import AppTest
@@ -137,6 +166,7 @@ def test_embedding_model_loaded_once_across_queries(monkeypatch):
     fake = types.ModuleType("src.ingestion")
     fake._get_embedder = counting_loader
     fake.query = lambda question, top_k=5: []
+    fake.bootstrap_index = lambda: False
     monkeypatch.setitem(sys.modules, "src.ingestion", fake)
     monkeypatch.setattr(
         "src.answer_engine.answer",
