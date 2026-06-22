@@ -74,3 +74,23 @@ def test_clear_empties_the_store():
     clear()
 
     assert query("anything at all", top_k=5) == []
+
+
+def test_parse_pdf_extracts_text_from_all_pages():
+    """Ingestion boundary test: a known 2-page PDF yields one Chunk per page,
+    each carrying source_file metadata and non-empty text."""
+    from src.ingestion import _parse_pdf, _chunk_text
+
+    records = _parse_pdf(str(FIXTURES / "sample.pdf"), "sample.pdf")
+
+    # known fixture has two pages → one record per page
+    assert len(records) == 2
+    assert all(r["source_file"] == "sample.pdf" for r in records)
+    assert all(r["section_heading"] == "" for r in records)
+    assert all(r["text"].strip() for r in records), "every page must have non-empty text"
+
+    # the extracted text flows through the existing chunker unchanged
+    chunks = [c for r in records for c in _chunk_text(r["text"]) if c.strip()]
+    assert len(chunks) == 2
+    assert any("cancel an order" in c for c in chunks)
+    assert any("catalog endpoint" in c for c in chunks)

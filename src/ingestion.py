@@ -1,7 +1,4 @@
 import os
-import re
-import chromadb
-from sentence_transformers import SentenceTransformer
 
 _MODEL_NAME = "intfloat/multilingual-e5-small"
 _embedder = None
@@ -12,6 +9,7 @@ _collection = None
 def _get_embedder():
     global _embedder
     if _embedder is None:
+        from sentence_transformers import SentenceTransformer
         _embedder = SentenceTransformer(_MODEL_NAME)
     return _embedder
 
@@ -19,6 +17,7 @@ def _get_embedder():
 def _get_collection():
     global _client, _collection
     if _collection is None:
+        import chromadb
         db_path = os.environ.get("CHROMA_DB_PATH", ".chroma")
         _client = chromadb.PersistentClient(path=db_path)
         _collection = _client.get_or_create_collection("documents")
@@ -76,15 +75,34 @@ def _parse_plaintext(content, source_file):
     return [{"text": content.strip(), "source_file": source_file, "section_heading": ""}]
 
 
+def _parse_pdf(file_path, source_file):
+    import fitz
+
+    records = []
+    with fitz.open(file_path) as doc:
+        for page in doc:
+            text = page.get_text().strip()
+            if text:
+                records.append({
+                    "text": text,
+                    "source_file": source_file,
+                    "section_heading": "",
+                })
+    return records
+
+
 def ingest(file_path: str, chunk_size: int = 750, overlap: int = 100) -> int:
     source_file = os.path.basename(file_path)
-    with open(file_path, "r", encoding="utf-8") as f:
-        content = f.read()
 
-    if file_path.endswith(".md"):
-        records = _parse_markdown(content, source_file)
+    if file_path.endswith(".pdf"):
+        records = _parse_pdf(file_path, source_file)
     else:
-        records = _parse_plaintext(content, source_file)
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        if file_path.endswith(".md"):
+            records = _parse_markdown(content, source_file)
+        else:
+            records = _parse_plaintext(content, source_file)
 
     embedder = _get_embedder()
     collection = _get_collection()
