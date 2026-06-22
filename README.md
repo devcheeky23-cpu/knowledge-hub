@@ -21,9 +21,9 @@ questions grounded in ingested documents with citations (and abstains or reports
 conflicts when appropriate), plus a document management page
 (`pages/Manage_Documents.py`) for uploading, listing, deleting, and re-ingesting
 documents. Markdown, plain-text, and PDF documents are supported. On a cold start
-the vector store is seeded automatically from the committed `seed_docs/` corpus
-(`ingestion.bootstrap_index()`), so the app is queryable immediately with no
-manual re-ingest.
+the system is seeded automatically from the committed `seed_docs/` corpus
+(`document_manager.bootstrap()` persists and ingests it), so the app is queryable
+immediately — and citations can open full documents — with no manual re-ingest.
 
 ## Configuration
 

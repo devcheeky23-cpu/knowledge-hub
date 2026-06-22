@@ -24,6 +24,24 @@ def save_and_ingest(filename: str, data: bytes) -> int:
     return ingestion.ingest(str(path))
 
 
+def bootstrap() -> bool:
+    """Seed the system from the committed seed corpus on a cold start. HF Spaces
+    disk is ephemeral, so on first start both the source store and the vector
+    store are empty; persist and ingest every file under seed_docs/ so the app is
+    queryable and Citations can open full Documents with no manual re-ingest.
+    Returns True if it seeded, False if Documents already exist (a warm session
+    is preserved)."""
+    if list_documents():
+        return False
+    seed = Path(os.environ.get("SEED_DOCS_PATH", "seed_docs"))
+    if not seed.exists():
+        return False
+    for doc in sorted(seed.iterdir()):
+        if doc.is_file():
+            save_and_ingest(doc.name, doc.read_bytes())
+    return True
+
+
 def list_documents() -> list[str]:
     """Names of all Documents currently stored, sorted."""
     return sorted(p.name for p in _source_dir().iterdir() if p.is_file())

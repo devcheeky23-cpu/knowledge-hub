@@ -11,11 +11,11 @@ from src import answer_engine
 
 @st.cache_resource
 def _bootstrap():
-    """Seed the vector store from the committed pre-built index once on cold
-    start, so the app is queryable immediately with no manual re-ingest."""
-    from src.ingestion import bootstrap_index
+    """Seed the system from the committed seed corpus once on cold start, so the
+    app is queryable immediately with no manual re-ingest."""
+    from src import document_manager
 
-    return bootstrap_index()
+    return document_manager.bootstrap()
 
 
 @st.cache_resource

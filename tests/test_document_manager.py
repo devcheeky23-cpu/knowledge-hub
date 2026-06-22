@@ -100,6 +100,33 @@ def test_get_document_text_extracts_full_text_from_pdf(monkeypatch, tmp_path):
     assert "catalog endpoint" in full
 
 
+def test_bootstrap_seeds_from_seed_docs_on_cold_start(dm, tmp_path, monkeypatch):
+    seed = tmp_path / "seed_docs"
+    seed.mkdir()
+    (seed / "policy.md").write_text("# Refunds\nRefunds within 30 days.")
+    monkeypatch.setenv("SEED_DOCS_PATH", str(seed))
+
+    seeded = dm.bootstrap()
+
+    assert seeded is True
+    # the seed Document is in the source store, so a Citation can open it
+    assert dm.list_documents() == ["policy.md"]
+    assert "30 days" in dm.get_document_text("policy.md")
+
+
+def test_bootstrap_is_noop_when_documents_already_exist(dm, tmp_path, monkeypatch):
+    seed = tmp_path / "seed_docs"
+    seed.mkdir()
+    (seed / "policy.md").write_text("# Refunds\ncontent")
+    monkeypatch.setenv("SEED_DOCS_PATH", str(seed))
+    dm.save_and_ingest("existing.md", b"# Existing\nan uploaded doc")
+
+    seeded = dm.bootstrap()
+
+    assert seeded is False
+    assert dm.list_documents() == ["existing.md"]  # seed not applied over a warm store
+
+
 def test_reingest_clears_store_then_reingests_every_document(dm, fake_ingestion):
     dm.save_and_ingest("orders.md", b"# Orders\ncontent")
     dm.save_and_ingest("refunds.md", b"# Refunds\ncontent")
