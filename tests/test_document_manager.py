@@ -2,8 +2,11 @@ import importlib
 import os
 import sys
 import types
+from pathlib import Path
 
 import pytest
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
@@ -30,7 +33,11 @@ def fake_ingestion(monkeypatch, tmp_path):
     fake.delete_document = delete_document
     fake.clear = clear
 
+    import src as src_pkg
     monkeypatch.setitem(sys.modules, "src.ingestion", fake)
+    # `from src import ingestion` reads the package attribute, which a prior real
+    # import (e.g. the PDF read-back test) pollutes — override it too.
+    monkeypatch.setattr(src_pkg, "ingestion", fake, raising=False)
     monkeypatch.setenv("SOURCE_DOCS_PATH", str(tmp_path / "source_docs"))
     sys.modules.pop("src.document_manager", None)
     yield fake
@@ -64,6 +71,33 @@ def test_delete_document_removes_file_and_its_chunks(dm, fake_ingestion):
     assert dm.list_documents() == ["refunds.md"]
     # and its Chunks were removed from the vector store
     assert fake_ingestion.deleted == ["orders.md"]
+
+
+def test_get_document_text_returns_full_original_text(dm):
+    dm.save_and_ingest("orders.md", b"# Orders\nHow to cancel an order.")
+
+    # a citation resolves back to the whole Document, not just the retrieved Chunk
+    full = dm.get_document_text("orders.md")
+
+    assert full == "# Orders\nHow to cancel an order."
+
+
+def test_get_document_text_extracts_full_text_from_pdf(monkeypatch, tmp_path):
+    # uses the real ingestion module (its imports are lazy, so no chromadb needed)
+    monkeypatch.setenv("SOURCE_DOCS_PATH", str(tmp_path / "source_docs"))
+    sys.modules.pop("src.document_manager", None)
+    import src.document_manager as dm
+    importlib.reload(dm)
+
+    src_dir = tmp_path / "source_docs"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "sample.pdf").write_bytes((FIXTURES / "sample.pdf").read_bytes())
+
+    full = dm.get_document_text("sample.pdf")
+
+    # full text spans every page, not just one chunk
+    assert "cancel an order" in full
+    assert "catalog endpoint" in full
 
 
 def test_reingest_clears_store_then_reingests_every_document(dm, fake_ingestion):

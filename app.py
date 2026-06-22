@@ -17,7 +17,7 @@ def _embedder():
     return _get_embedder()
 
 
-def _render_answer(answer):
+def _render_answer(answer, msg_idx):
     if answer.mode == "abstain":
         st.warning("Information not found in the documents.")
         return
@@ -27,10 +27,14 @@ def _render_answer(answer):
 
     st.markdown(answer.answer_text)
 
-    for citation in answer.citations:
+    for cite_idx, citation in enumerate(answer.citations):
         section = citation.section_heading or "(no section)"
         with st.expander(f"📄 {citation.source_file} — {section}"):
             st.markdown(citation.chunk_text)
+            if st.toggle("📖 View full document", key=f"fulldoc_{msg_idx}_{cite_idx}"):
+                from src import document_manager
+
+                st.markdown(document_manager.get_document_text(citation.source_file))
 
 
 st.title("📚 Knowledge Hub")
@@ -41,12 +45,12 @@ _embedder()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-for message in st.session_state.messages:
+for msg_idx, message in enumerate(st.session_state.messages):
     with st.chat_message(message["role"]):
         if message["role"] == "user":
             st.markdown(message["content"])
         else:
-            _render_answer(message["answer"])
+            _render_answer(message["answer"], msg_idx)
 
 question = st.chat_input("Ask a question")
 if question:
@@ -57,4 +61,4 @@ if question:
     answer = answer_engine.answer(question)
     st.session_state.messages.append({"role": "assistant", "answer": answer})
     with st.chat_message("assistant"):
-        _render_answer(answer)
+        _render_answer(answer, len(st.session_state.messages) - 1)

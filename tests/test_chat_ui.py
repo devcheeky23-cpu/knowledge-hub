@@ -47,6 +47,30 @@ def test_found_renders_answer_and_expandable_citation(monkeypatch):
     assert any("To cancel, open Settings" in m.value for m in expanders[0].markdown)
 
 
+def test_citation_can_reveal_full_source_document(monkeypatch):
+    # the full Document is fetched on demand from the document manager
+    fake_dm = types.ModuleType("src.document_manager")
+    fake_dm.get_document_text = lambda name: f"FULL TEXT of {name}\nevery line of it."
+    monkeypatch.setitem(sys.modules, "src.document_manager", fake_dm)
+    import src as src_pkg
+    monkeypatch.setattr(src_pkg, "document_manager", fake_dm, raising=False)
+
+    ans = Answer(
+        mode="found",
+        answer_text="Open Settings to cancel an order.",
+        citations=[Citation("orders.md", "Cancelling", "To cancel, open Settings.")],
+    )
+
+    at = _run(monkeypatch, ans, "how do I cancel an order")
+
+    # full document stays hidden until the user asks for it
+    assert not any("FULL TEXT of orders.md" in m.value for m in at.markdown)
+
+    at.toggle[0].set_value(True).run()
+
+    assert any("FULL TEXT of orders.md" in m.value for m in at.markdown)
+
+
 def test_abstain_shows_not_found_message_and_no_citations(monkeypatch):
     ans = Answer(
         mode="abstain",

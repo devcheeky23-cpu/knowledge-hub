@@ -18,7 +18,7 @@ A full rebuild of the vector store: all existing Chunks are deleted, then every 
 The heading of the section within a Document that a Chunk belongs to. Extracted from Markdown headings (`#`, `##`, etc.) during Ingestion. Stored as an empty string `""` when no heading exists (plain-text Documents, PDF pages without headings). The UI renders an empty Section Heading as "(no section)" — storage and display are separate concerns.
 
 ### Document Manager
-The module responsible for listing and deleting Documents. Deleting a Document removes both its Chunks from the vector store and its original source file from storage — the Document is gone from the system entirely, not merely hidden from search.
+The module responsible for listing, deleting, and retrieving the full text of Documents. Deleting a Document removes both its Chunks from the vector store and its original source file from storage — the Document is gone from the system entirely, not merely hidden from search. Retrieving full text lets a Citation resolve back to the whole source Document, not just the retrieved Chunk (PDF text is re-extracted on demand via the Ingestion parser).
 
 ### LLM Client
 A thin, provider-agnostic module with one concern: send a prompt string, receive a response string. No knowledge of Chunks, Citations, Answer modes, or any domain concept. Provider and model are selected via config (env vars) — no code changes required to swap. The Answer Engine calls the LLM Client; the LLM Client knows nothing about the Answer Engine.
