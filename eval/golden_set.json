@@ -1,0 +1,150 @@
+{
+  "description": "Golden question set for Knowledge Hub eval (#11). Corpus = seed_docs/ (ShopFlow mock e-commerce). Three categories: answerable (found + correct citation), out_of_scope (abstain), conflict (report both sides). Run against the deployed HF Space or a local instance with a token set.",
+  "pass_threshold": 0.75,
+  "questions": [
+    {
+      "id": "A1",
+      "category": "answerable",
+      "question": "Which HTTP header carries the authentication token?",
+      "expected_mode": "found",
+      "expected_answer": "The bearer token is sent in the Authorization header.",
+      "expected_sources": ["authentication.md", "api_spec.md"]
+    },
+    {
+      "id": "A2",
+      "category": "answerable",
+      "question": "How long are access tokens valid before they expire?",
+      "expected_mode": "found",
+      "expected_answer": "Access tokens are valid for 24 hours; after that the client must log in again.",
+      "expected_sources": ["authentication.md"]
+    },
+    {
+      "id": "A3",
+      "category": "answerable",
+      "question": "Does ShopFlow issue refresh tokens?",
+      "expected_mode": "found",
+      "expected_answer": "No. ShopFlow does not currently issue refresh tokens; clients re-login after expiry.",
+      "expected_sources": ["authentication.md"]
+    },
+    {
+      "id": "A4",
+      "category": "answerable",
+      "question": "How long is a password reset link valid, and how many times can it be used?",
+      "expected_mode": "found",
+      "expected_answer": "The reset link is valid for one hour and can be used only once.",
+      "expected_sources": ["authentication.md"]
+    },
+    {
+      "id": "A5",
+      "category": "answerable",
+      "question": "What HTTP status does POST /cart/items return when the requested quantity exceeds available inventory?",
+      "expected_mode": "found",
+      "expected_answer": "It responds 409.",
+      "expected_sources": ["api_spec.md"]
+    },
+    {
+      "id": "A6",
+      "category": "answerable",
+      "question": "Under which order statuses can an order be cancelled?",
+      "expected_mode": "found",
+      "expected_answer": "Only orders in pending or paid status can be cancelled; a shipped order cannot be cancelled (responds 409) and must be returned instead.",
+      "expected_sources": ["orders_and_returns.md", "api_spec.md"]
+    },
+    {
+      "id": "A7",
+      "category": "answerable",
+      "question": "What are the possible statuses an order can have?",
+      "expected_mode": "found",
+      "expected_answer": "pending, paid, shipped, delivered, or cancelled.",
+      "expected_sources": ["product_requirements.md"]
+    },
+    {
+      "id": "A8",
+      "category": "answerable",
+      "question": "How long are inactive carts kept before being cleared?",
+      "expected_mode": "found",
+      "expected_answer": "Carts are persisted for 30 days of inactivity before being cleared.",
+      "expected_sources": ["product_requirements.md"]
+    },
+    {
+      "id": "A9",
+      "category": "answerable",
+      "question": "Once a refund is approved, how long does it take to appear?",
+      "expected_mode": "found",
+      "expected_answer": "Typically 5 to 7 business days, depending on the card issuer.",
+      "expected_sources": ["orders_and_returns.md"]
+    },
+    {
+      "id": "A10",
+      "category": "answerable",
+      "question": "What is the default and maximum page_size when listing products?",
+      "expected_mode": "found",
+      "expected_answer": "Default page_size is 20 and the maximum is 100.",
+      "expected_sources": ["api_spec.md"]
+    },
+    {
+      "id": "A11",
+      "category": "answerable",
+      "question": "What happens to the cart if payment fails during checkout?",
+      "expected_mode": "found",
+      "expected_answer": "If payment fails the order is not created and the cart is preserved (the API responds 402 on payment capture failure).",
+      "expected_sources": ["product_requirements.md", "api_spec.md"]
+    },
+    {
+      "id": "O1",
+      "category": "out_of_scope",
+      "question": "What is ShopFlow's monthly subscription pricing?",
+      "expected_mode": "abstain",
+      "expected_answer": "Abstain — the documents do not contain subscription pricing.",
+      "expected_sources": []
+    },
+    {
+      "id": "O2",
+      "category": "out_of_scope",
+      "question": "Which programming language and framework is the ShopFlow backend built with?",
+      "expected_mode": "abstain",
+      "expected_answer": "Abstain — the documents do not state the backend language or framework.",
+      "expected_sources": []
+    },
+    {
+      "id": "O3",
+      "category": "out_of_scope",
+      "question": "What is ShopFlow's customer support phone number?",
+      "expected_mode": "abstain",
+      "expected_answer": "Abstain — no support phone number appears in the documents.",
+      "expected_sources": []
+    },
+    {
+      "id": "O4",
+      "category": "out_of_scope",
+      "question": "What is ShopFlow's uptime or availability SLA?",
+      "expected_mode": "abstain",
+      "expected_answer": "Abstain — the documents do not mention an uptime or availability SLA.",
+      "expected_sources": []
+    },
+    {
+      "id": "C1",
+      "category": "conflict",
+      "question": "What is the return window for getting a refund?",
+      "expected_mode": "conflict",
+      "expected_answer": "Conflict — the 2022 refund policy says 14 days from delivery, while the 2024 refund policy says 30 days. Both should be reported without choosing a side.",
+      "expected_sources": ["refund_policy_2022.md", "refund_policy_2024.md"]
+    },
+    {
+      "id": "C2",
+      "category": "conflict",
+      "question": "How many days after delivery do I have to return an item for a refund?",
+      "expected_mode": "conflict",
+      "expected_answer": "Conflict — 14 days per the 2022 policy versus 30 days per the 2024 policy.",
+      "expected_sources": ["refund_policy_2022.md", "refund_policy_2024.md"]
+    },
+    {
+      "id": "C3",
+      "category": "conflict",
+      "question": "Can I return an item 20 days after delivery for a refund?",
+      "expected_mode": "conflict",
+      "expected_answer": "Conflict — the 2022 policy says no (past the 14-day window), but the 2024 policy says yes (within 30 days). Both should be reported.",
+      "expected_sources": ["refund_policy_2022.md", "refund_policy_2024.md"]
+    }
+  ]
+}
