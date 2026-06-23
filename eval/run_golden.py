@@ -10,7 +10,11 @@ final pass/fail. Mode + citation are necessary but not sufficient for a pass.
 
 Usage (from repo root, with a provider token set, e.g. GITHUB_MODELS_TOKEN):
 
-    python -m eval.run_golden
+    python -m eval.run_golden                        # English set -> results.md
+    python -m eval.run_golden eval/golden_set_th.json  # Thai set -> results_th.md
+
+The results file name is derived from the golden-set name
+(golden_set.json -> results.md, golden_set_th.json -> results_th.md).
 
 Provider/model are selected by the same env vars the app uses
 (LLM_PROVIDER, LLM_MODEL, and the provider's token var).
@@ -23,8 +27,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-GOLDEN = Path(__file__).resolve().parent / "golden_set.json"
-RESULTS = Path(__file__).resolve().parent / "results.md"
+HERE = Path(__file__).resolve().parent
+DEFAULT_GOLDEN = HERE / "golden_set.json"
+
+
+def _results_path(golden: Path) -> Path:
+    # golden_set.json -> results.md ; golden_set_th.json -> results_th.md
+    suffix = golden.stem.replace("golden_set", "")
+    return HERE / f"results{suffix}.md"
 
 
 def _ensure_index():
@@ -52,7 +62,9 @@ def _md_escape(text):
 
 
 def main():
-    spec = json.loads(GOLDEN.read_text())
+    golden = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_GOLDEN
+    results = _results_path(golden)
+    spec = json.loads(golden.read_text())
     questions = spec["questions"]
     threshold = spec.get("pass_threshold", 0.75)
 
@@ -130,9 +142,9 @@ def main():
             )
         )
     lines.append("")
-    RESULTS.write_text("\n".join(lines))
+    results.write_text("\n".join(lines))
 
-    print(f"Wrote {RESULTS}")
+    print(f"Wrote {results}")
     print(f"Automated pass: {auto_pass}/{len(questions)} = {rate:.0%} (threshold {threshold:.0%})")
     if rate < threshold:
         print("Below threshold — review failures and iterate on prompt/chunking per #11.")

@@ -1,0 +1,150 @@
+{
+  "description": "Thai-language golden question set for Knowledge Hub eval (#11). Mirrors golden_set.json (same ids, expected modes, and expected citation sources) but asks in Thai. The corpus (seed_docs/) is English; retrieval is cross-lingual via the multilingual-e5 embedder, and the system should answer in Thai grounded in the English chunks. expected_answer is the Thai gist to compare against.",
+  "pass_threshold": 0.75,
+  "questions": [
+    {
+      "id": "A1",
+      "category": "answerable",
+      "question": "โทเค็นสำหรับยืนยันตัวตน (authentication) ส่งผ่าน HTTP header ตัวไหน?",
+      "expected_mode": "found",
+      "expected_answer": "ส่ง bearer token ผ่าน header ชื่อ Authorization",
+      "expected_sources": ["authentication.md", "api_spec.md"]
+    },
+    {
+      "id": "A2",
+      "category": "answerable",
+      "question": "access token มีอายุการใช้งานนานเท่าไรก่อนหมดอายุ?",
+      "expected_mode": "found",
+      "expected_answer": "access token ใช้ได้ 24 ชั่วโมง หลังจากนั้นต้องล็อกอินใหม่",
+      "expected_sources": ["authentication.md"]
+    },
+    {
+      "id": "A3",
+      "category": "answerable",
+      "question": "ShopFlow ออก refresh token ให้หรือไม่?",
+      "expected_mode": "found",
+      "expected_answer": "ไม่ ปัจจุบัน ShopFlow ไม่ได้ออก refresh token ต้องล็อกอินใหม่เมื่อโทเค็นหมดอายุ",
+      "expected_sources": ["authentication.md"]
+    },
+    {
+      "id": "A4",
+      "category": "answerable",
+      "question": "ลิงก์รีเซ็ตรหัสผ่านมีอายุนานแค่ไหน และใช้ได้กี่ครั้ง?",
+      "expected_mode": "found",
+      "expected_answer": "ลิงก์รีเซ็ตรหัสผ่านมีอายุ 1 ชั่วโมง และใช้ได้เพียงครั้งเดียว",
+      "expected_sources": ["authentication.md"]
+    },
+    {
+      "id": "A5",
+      "category": "answerable",
+      "question": "เมื่อจำนวนสินค้าที่ขอเกินสต็อกที่มี POST /cart/items จะตอบกลับด้วย HTTP status อะไร?",
+      "expected_mode": "found",
+      "expected_answer": "ตอบกลับด้วย 409",
+      "expected_sources": ["api_spec.md"]
+    },
+    {
+      "id": "A6",
+      "category": "answerable",
+      "question": "คำสั่งซื้ออยู่ในสถานะใดบ้างจึงจะยกเลิกได้?",
+      "expected_mode": "found",
+      "expected_answer": "ยกเลิกได้เฉพาะคำสั่งซื้อสถานะ pending หรือ paid เท่านั้น ถ้าจัดส่ง (shipped) แล้วจะยกเลิกไม่ได้ (ตอบ 409) ต้องใช้การคืนสินค้าแทน",
+      "expected_sources": ["orders_and_returns.md", "api_spec.md"]
+    },
+    {
+      "id": "A7",
+      "category": "answerable",
+      "question": "คำสั่งซื้อมีสถานะอะไรได้บ้าง?",
+      "expected_mode": "found",
+      "expected_answer": "pending, paid, shipped, delivered หรือ cancelled",
+      "expected_sources": ["product_requirements.md"]
+    },
+    {
+      "id": "A8",
+      "category": "answerable",
+      "question": "ตะกร้าที่ไม่มีการใช้งานจะถูกเก็บไว้นานเท่าไรก่อนถูกล้าง?",
+      "expected_mode": "found",
+      "expected_answer": "ตะกร้าจะถูกเก็บไว้ 30 วันหลังไม่มีการใช้งาน ก่อนจะถูกล้าง",
+      "expected_sources": ["product_requirements.md"]
+    },
+    {
+      "id": "A9",
+      "category": "answerable",
+      "question": "เมื่อการคืนเงินได้รับการอนุมัติแล้ว ต้องใช้เวลานานเท่าไรเงินจึงจะเข้า?",
+      "expected_mode": "found",
+      "expected_answer": "โดยทั่วไป 5 ถึง 7 วันทำการ ขึ้นกับผู้ออกบัตร",
+      "expected_sources": ["orders_and_returns.md"]
+    },
+    {
+      "id": "A10",
+      "category": "answerable",
+      "question": "ค่า page_size สำหรับการดึงรายการสินค้า มีค่าเริ่มต้นและค่าสูงสุดเท่าไร?",
+      "expected_mode": "found",
+      "expected_answer": "ค่าเริ่มต้น page_size คือ 20 และสูงสุดคือ 100",
+      "expected_sources": ["api_spec.md"]
+    },
+    {
+      "id": "A11",
+      "category": "answerable",
+      "question": "ถ้าการชำระเงินล้มเหลวระหว่างเช็คเอาต์ ตะกร้าจะเป็นอย่างไร?",
+      "expected_mode": "found",
+      "expected_answer": "ถ้าชำระเงินล้มเหลว ระบบจะไม่สร้างคำสั่งซื้อและยังคงเก็บตะกร้าไว้ (API ตอบ 402 เมื่อเก็บเงินไม่สำเร็จ)",
+      "expected_sources": ["product_requirements.md", "api_spec.md"]
+    },
+    {
+      "id": "O1",
+      "category": "out_of_scope",
+      "question": "ค่าบริการรายเดือนแบบ subscription ของ ShopFlow ราคาเท่าไร?",
+      "expected_mode": "abstain",
+      "expected_answer": "abstain — เอกสารไม่มีข้อมูลราคาค่าบริการรายเดือน",
+      "expected_sources": []
+    },
+    {
+      "id": "O2",
+      "category": "out_of_scope",
+      "question": "ระบบหลังบ้านของ ShopFlow เขียนด้วยภาษาโปรแกรมและเฟรมเวิร์กอะไร?",
+      "expected_mode": "abstain",
+      "expected_answer": "abstain — เอกสารไม่ได้ระบุภาษาหรือเฟรมเวิร์กของระบบหลังบ้าน",
+      "expected_sources": []
+    },
+    {
+      "id": "O3",
+      "category": "out_of_scope",
+      "question": "เบอร์โทรศัพท์ฝ่ายบริการลูกค้าของ ShopFlow คือเบอร์อะไร?",
+      "expected_mode": "abstain",
+      "expected_answer": "abstain — เอกสารไม่มีเบอร์โทรศัพท์ฝ่ายบริการลูกค้า",
+      "expected_sources": []
+    },
+    {
+      "id": "O4",
+      "category": "out_of_scope",
+      "question": "ShopFlow รับประกันความพร้อมใช้งาน (uptime/SLA) ไว้เท่าไร?",
+      "expected_mode": "abstain",
+      "expected_answer": "abstain — เอกสารไม่ได้กล่าวถึง uptime หรือ SLA",
+      "expected_sources": []
+    },
+    {
+      "id": "C1",
+      "category": "conflict",
+      "question": "ระยะเวลาคืนสินค้าเพื่อขอรับเงินคืน (return window) คือกี่วัน?",
+      "expected_mode": "conflict",
+      "expected_answer": "conflict — นโยบายปี 2022 ระบุ 14 วันนับจากวันที่ส่งมอบ ส่วนนโยบายปี 2024 ระบุ 30 วัน ต้องรายงานทั้งสองฝั่งโดยไม่เลือกข้าง",
+      "expected_sources": ["refund_policy_2022.md", "refund_policy_2024.md"]
+    },
+    {
+      "id": "C2",
+      "category": "conflict",
+      "question": "หลังได้รับสินค้าแล้วมีเวลากี่วันในการคืนสินค้าเพื่อขอเงินคืน?",
+      "expected_mode": "conflict",
+      "expected_answer": "conflict — 14 วันตามนโยบายปี 2022 เทียบกับ 30 วันตามนโยบายปี 2024",
+      "expected_sources": ["refund_policy_2022.md", "refund_policy_2024.md"]
+    },
+    {
+      "id": "C3",
+      "category": "conflict",
+      "question": "ฉันคืนสินค้าเพื่อขอเงินคืนได้ไหม ถ้าผ่านไป 20 วันหลังได้รับสินค้า?",
+      "expected_mode": "conflict",
+      "expected_answer": "conflict — นโยบายปี 2022 บอกว่าไม่ได้ (เกินกรอบ 14 วัน) แต่นโยบายปี 2024 บอกว่าได้ (ภายใน 30 วัน) ต้องรายงานทั้งสองฝั่ง",
+      "expected_sources": ["refund_policy_2022.md", "refund_policy_2024.md"]
+    }
+  ]
+}
